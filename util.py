@@ -1,8 +1,8 @@
 #coding=utf-8
-import urllib2
+import urllib.request
 import gzip
-import StringIO
-import ConfigParser
+import io
+import configparser
 
 
 def get_content(toUrl,count):
@@ -17,7 +17,7 @@ def get_content(toUrl,count):
             'Fail' if fail
     """
 
-    cf = ConfigParser.ConfigParser()
+    cf = configparser.ConfigParser()
     cf.read("config.ini")
     cookie = cf.get("cookie", "cookie")
 
@@ -29,26 +29,26 @@ def get_content(toUrl,count):
         'Accept-Encoding':'gzip'
     }
 
-    req = urllib2.Request(
+    req = urllib.request.Request(
         url = toUrl,
         headers = headers
     )
 
     try:
-        opener = urllib2.build_opener(urllib2.ProxyHandler())
-        urllib2.install_opener(opener)
+        opener = urllib.request.build_opener(urllib2.ProxyHandler())
+        urllib.request.install_opener(opener)
 
-        page = urllib2.urlopen(req,timeout = 15)
+        page = urllib.request.urlopen(req,timeout = 15)
 
         headers = page.info()
         content = page.read()
-    except Exception,e:
+    except Exception as e:
         if count % 1 == 0:
-            print str(count) + ", Error: " + str(e) + " URL: " + toUrl
+            print (str(count) + ", Error: " + str(e) + " URL: " + toUrl)
         return "FAIL"
 
     if page.info().get('Content-Encoding') == 'gzip':
-        data = StringIO.StringIO(content)
+        data = io.BytesIO(content)
         gz = gzip.GzipFile(fileobj=data)
         content = gz.read()
         gz.close()

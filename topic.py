@@ -1,5 +1,5 @@
 #coding=utf-8
-import MySQLdb
+import pymysql
 from bs4 import BeautifulSoup
 import json
 import re
@@ -7,8 +7,8 @@ import time
 from math import ceil
 import logging
 import threading
-import Queue
-import ConfigParser
+import queue
+import configparser
 
 from util import get_content
 
@@ -18,7 +18,7 @@ class UpdateOneTopic(threading.Thread):
         self.queue = queue
         threading.Thread.__init__(self)
 
-        cf = ConfigParser.ConfigParser()
+        cf = configparser.ConfigParser()
         cf.read("config.ini")
         
         host = cf.get("db", "host")
@@ -29,7 +29,7 @@ class UpdateOneTopic(threading.Thread):
         charset = cf.get("db", "charset")
         use_unicode = cf.get("db", "use_unicode")
 
-        self.db = MySQLdb.connect(host=host, port=port, user=user, passwd=passwd, db=db_name, charset=charset, use_unicode=use_unicode)
+        self.db = pymysql.connect(host=host, port=port, user=user, passwd=passwd, db=db_name, charset=charset, use_unicode=use_unicode)
         self.cursor = self.db.cursor()
         
     def run(self):
@@ -45,7 +45,7 @@ class UpdateOneTopic(threading.Thread):
         if content == "FAIL":
             return 0
 
-        soup = BeautifulSoup(content)
+        soup = beautifulsoup4(content)
 
         questions = soup.findAll('a',attrs={'class':'question_link'})
 
@@ -76,7 +76,7 @@ class UpdateOneTopic(threading.Thread):
                 break
         
         if count_id % 2 == 0:
-            print str(count_id) + " , " + self.getName() + " Finshed TOPIC " + link_id + ", page " + str(i) + " ; Add " + str(new_question_amount_total) + " questions."
+            print (str(count_id) + " , " + self.getName() + " Finshed TOPIC " + link_id + ", page " + str(i) + " ; Add " + str(new_question_amount_total) + " questions.")
 
         time_now = int(time.time())
         sql = "UPDATE TOPIC SET LAST_VISIT = %s WHERE LINK_ID = %s"
@@ -84,7 +84,7 @@ class UpdateOneTopic(threading.Thread):
 
 class UpdateTopics:
     def __init__(self):
-        cf = ConfigParser.ConfigParser()
+        cf = configparser.ConfigParser()
         cf.read("config.ini")
         
         host = cf.get("db", "host")
@@ -97,14 +97,14 @@ class UpdateTopics:
 
         self.topic_thread_amount = int(cf.get("topic_thread_amount","topic_thread_amount"))
 
-        self.db = MySQLdb.connect(host=host, port=port, user=user, passwd=passwd, db=db_name, charset=charset, use_unicode=use_unicode)
+        self.db = pymysql.connect(host=host, port=port, user=user, passwd=passwd, db=db_name, charset=charset, use_unicode=use_unicode)
         self.cursor = self.db.cursor()
 
     def run(self):
         time_now = int(time.time())
         before_last_vist_time = time_now - 10
 
-        queue = Queue.Queue()
+        queue1 = queue.Queue()
         threads = []
 
         i = 0
@@ -116,11 +116,11 @@ class UpdateTopics:
         for row in results:
             link_id = str(row[0])
 
-            queue.put([link_id, i])
+            queue1.put([link_id, i])
             i = i + 1
 
         for i in range(self.topic_thread_amount):
-            threads.append(UpdateOneTopic(queue))
+            threads.append(UpdateOneTopic(queue1))
 
         for i in range(self.topic_thread_amount):
             threads[i].start()
@@ -130,7 +130,7 @@ class UpdateTopics:
 
         self.db.close()
 
-        print 'All task done'
+        print ('All task done')
 
 if __name__ == '__main__':
     topic_spider = UpdateTopics()

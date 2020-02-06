@@ -1,5 +1,5 @@
 #coding=utf-8
-import MySQLdb
+import pymysql
 from bs4 import BeautifulSoup
 import json
 import re
@@ -7,8 +7,8 @@ import time
 from math import ceil
 import logging
 import threading
-import Queue
-import ConfigParser
+import queue
+import configparser
 
 from util import get_content
 
@@ -18,7 +18,7 @@ class UpdateOneQuestion(threading.Thread):
         self.queue = queue
         threading.Thread.__init__(self)
 
-        cf = ConfigParser.ConfigParser()
+        cf = configparser.ConfigParser()
         cf.read("config.ini")
         
         host = cf.get("db", "host")
@@ -29,7 +29,7 @@ class UpdateOneQuestion(threading.Thread):
         charset = cf.get("db", "charset")
         use_unicode = cf.get("db", "use_unicode")
 
-        self.db = MySQLdb.connect(host=host, port=port, user=user, passwd=passwd, db=db_name, charset=charset, use_unicode=use_unicode)
+        self.db = pymysql.connect(host=host, port=port, user=user, passwd=passwd, db=db_name, charset=charset, use_unicode=use_unicode)
         self.cursor = self.db.cursor()
         
     def run(self):
@@ -95,7 +95,7 @@ class UpdateOneQuestion(threading.Thread):
 
         # print it to check if everything is good.
         if count_id % 1 == 0:
-            print str(count_id) + " , " + self.getName() + " Update QUESTION set FOCUS = " + focus_amount + " , ANSWER = " + answer_amount + ", LAST_VISIT = " + str(time_now) + ", TOP_ANSWER_NUMBER = " + str(top_answer_votes) + " where LINK_ID = " + link_id
+            print (str(count_id) + " , " + self.getName() + " Update QUESTION set FOCUS = " + focus_amount + " , ANSWER = " + answer_amount + ", LAST_VISIT = " + str(time_now) + ", TOP_ANSWER_NUMBER = " + str(top_answer_votes) + " where LINK_ID = " + link_id)
         #print str(count_id) + " , " + self.getName() + " Update QUESTION set FOCUS = " + focus_amount + " , ANSWER = " + answer_amount + ", LAST_VISIT = " + str(time_now) + ", TOP_ANSWER_NUMBER = " + str(top_answer_votes) + " where LINK_ID = " + link_id
         
         # Update this question
@@ -118,7 +118,7 @@ class UpdateOneQuestion(threading.Thread):
 
 class UpdateQuestions:
     def __init__(self):
-        cf = ConfigParser.ConfigParser()
+        cf = configparser.ConfigParser()
         cf.read("config.ini")
         
         host = cf.get("db", "host")
@@ -131,11 +131,11 @@ class UpdateQuestions:
 
         self.question_thread_amount = int(cf.get("question_thread_amount","question_thread_amount"))
 
-        self.db = MySQLdb.connect(host=host, port=port, user=user, passwd=passwd, db=db_name, charset=charset, use_unicode=use_unicode)
+        self.db = pymysql.connect(host=host, port=port, user=user, passwd=passwd, db=db_name, charset=charset, use_unicode=use_unicode)
         self.cursor = self.db.cursor()
 
     def run(self):
-        queue = Queue.Queue()
+        queue1 = queue.Queue()
         threads = []
 
         time_now = int(time.time())
@@ -151,13 +151,13 @@ class UpdateQuestions:
         for row in results:
             link_id = str(row[0])
 
-            queue.put([link_id, i])
+            queue1.put([link_id, i])
             i = i + 1
 
         thread_amount = self.question_thread_amount
 
         for i in range(thread_amount):
-            threads.append(UpdateOneQuestion(queue))
+            threads.append(UpdateOneQuestion(queue1))
 
         for i in range(thread_amount):
             threads[i].start()
@@ -167,7 +167,7 @@ class UpdateQuestions:
 
         self.db.close()
 
-        print 'All task done'
+        print ('All task done')
 
 
 if __name__ == '__main__':
